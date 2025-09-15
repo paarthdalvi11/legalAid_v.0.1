@@ -64,7 +64,4 @@ function App() {
   );
 }
 
-// HAHAHAHAHA TU TOH GAYA BETAAA!!
-
-
 export default App;
