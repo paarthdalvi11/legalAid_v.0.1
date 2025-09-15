@@ -7,3 +7,4 @@ google-generativeai
 langchain
 langchain-google-genai
 langchain-tavily
+python-multipart

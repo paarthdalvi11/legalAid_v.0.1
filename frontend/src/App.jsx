@@ -3,43 +3,63 @@ import ReactMarkdown from "react-markdown";
 
 function App() {
   const [query, setQuery] = useState("");
-  const [response, setResponse] = useState(null);
+  const [result, setResult] = useState("");
+  const [image, setImage] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const res = await fetch("http://localhost:8000/legal-assistant", {  // use localhost instead of 127.0.0.1
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
-    });
-    const data = await res.json();
-    setResponse(data);
+  const handleSearch = async () => {
+    try {
+      let data;
+      if (image) {
+        const formData = new FormData();
+        formData.append("file", image);
+
+        const res = await fetch("http://localhost:8000/legal-assistant-image", {
+          method: "POST",
+          body: formData,
+        });
+        data = await res.json();
+        setResult(`📌 Caption: ${data.caption}\n\n${data.ipc_analysis}`);
+      } else {
+        const res = await fetch("http://localhost:8000/legal-assistant", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query }),
+        });
+        data = await res.json();
+        setResult(data.ipc_analysis);
+      }
+    } catch (err) {
+      console.error(err);
+      setResult("❌ Error: Could not fetch response from backend.");
+    }
   };
 
   return (
-    <div style={{ padding: "20px", fontFamily: "Arial" }}>
-      <h1>Legal Assistant</h1>
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Enter your legal query..."
-          style={{ width: "400px", padding: "8px" }}
-        />
-        <button type="submit" style={{ marginLeft: "10px", padding: "8px 16px" }}>
-          Search
-        </button>
-      </form>
+    <div style={{ padding: "20px" }}>
+      <h1>⚖️ Legal Assistant</h1>
 
-      {response && (
-        <div style={{ marginTop: "20px" }}>
-          <h2>📌 IPC Analysis</h2>
-          <ReactMarkdown>{response.ipc_analysis}</ReactMarkdown>
-          <h2>⚖️ Case Precedents</h2>
-          <ReactMarkdown>{response.precedents}</ReactMarkdown>
-        </div>
-      )}
+      <textarea
+        placeholder="Enter your query..."
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        style={{ width: "100%", height: "80px", marginBottom: "10px" }}
+        disabled={!!image}
+      />
+
+      <input
+        type="file"
+        accept="image/*"
+        onChange={(e) => setImage(e.target.files[0])}
+      />
+
+      <br />
+      <button onClick={handleSearch} style={{ marginTop: "10px" }}>
+        Search
+      </button>
+
+      <div style={{ marginTop: "20px" }}>
+        <ReactMarkdown>{result}</ReactMarkdown>
+      </div>
     </div>
   );
 }

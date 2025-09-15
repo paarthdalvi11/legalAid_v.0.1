@@ -2,6 +2,7 @@ import os
 import pickle
 import faiss
 from fastapi import FastAPI, HTTPException
+from fastapi import UploadFile, File
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -69,7 +70,7 @@ Based on these legal IPC chunks:
 
 Give two outputs:
 
-**Legal Advice**: List all IPCs mentioned, and explain them simply.
+**Legal Advice**: List all IPCs mentioned, and explain them simply (The IPC Sections might be fetched wrongly... you correct it as per your knowledge).
 **Non-Legal Advice**: Real-world steps the user can take immediately.
 """
     return gemini_model.generate_content(prompt).text
@@ -117,3 +118,28 @@ async def legal_assistant(request: QueryRequest):
     ipc_analysis = ask_gemini_ipc_advice(query, ipc_results)
     precedents = get_case_precedents(query, agent_executor)
     return {"ipc_analysis": ipc_analysis, "precedents": precedents}
+
+@app.post("/legal-assistant-image")
+async def legal_assistant_image(file: UploadFile = File(...)):
+    try:
+        img_bytes = await file.read()
+        prompt = """
+        You are an image captioner for crime & suspicious activity detection. 
+        Provide a short, precise caption describing exactly what is happening.
+        - Mention weapons if present.
+        - Mention suspicious or violent actions.
+        - Be factual, not speculative.
+        """
+        response = gemini_model.generate_content([
+            prompt,
+            {"mime_type": file.content_type, "data": img_bytes}
+        ])
+        caption = response.text.strip()
+
+        # Use caption as query
+        ipc_results = search_ipc(caption, embed_model, index, ipc_chunks)
+        ipc_analysis = ask_gemini_ipc_advice(caption, ipc_results)
+
+        return {"caption": caption, "ipc_analysis": ipc_analysis}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
