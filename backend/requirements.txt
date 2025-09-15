@@ -8,3 +8,4 @@ langchain
 langchain-google-genai
 langchain-tavily
 python-multipart
+opencv-python
